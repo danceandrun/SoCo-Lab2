@@ -4,7 +4,7 @@ import json
 # Infix arithmetic operations
 def infix_evaluator(infix_expression : str) -> int :
     token_list = infix_expression.split()
-    print(token_list)
+    # print(token_list)
     # The dictionary of the operators precedence
     pre_dict = {'*' : 3, '/' : 3, '+' : 2, '-' : 2, 
                 'AND' : 1, 'OR' : 1, 'XOR' : 1,
@@ -66,9 +66,11 @@ def get_value(operator : str, op1 : int, op2 : int):
     elif operator == '/':
         return op1 / op2
     elif operator == 'AND':
-        return 1 if op1 == 1 and op2 == 1 else 0
+        # return 1 if op1 == 1 and op2 == 1 else 0
+        return op1 and op2
     elif operator == 'OR':
-        return 0 if op1 == 0 or op2 == 0 else 1
+        # return 0 if op1 == 0 or op2 == 0 else 1
+        return  op1 or op2
     elif operator == 'XOR':
         return 1 if (op1 == 1) != (op2 == 1) else 0
     else:
@@ -127,6 +129,19 @@ def main():
     for i, result in enumerate(result, start = 1):
         print(f"Expression {i}: {result}")
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
 
+def test_Feniel():
+    # Load program from the given JSON file
+    with open('example_infix.gsc', "r") as source:
+        program = json.load(source)
+
+    envs_stack = [{}]  # Initialize environment stack
+    result = do(envs_stack, program)
+
+    print("Results for each expression in sequence:")
+    for i, result in enumerate(result, start=1):
+        print(f"Expression {i}: {result}")
+
+test_Feniel()
