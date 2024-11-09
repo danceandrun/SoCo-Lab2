@@ -6,7 +6,7 @@ def infix_evaluator(infix_expression : str) -> int :
     token_list = infix_expression.split()
     # print(token_list)
     # The dictionary of the operators precedence
-    pre_dict = {'*' : 3, '/' : 3, '+' : 2, '-' : 2, 
+    pre_dict = {'*' : 3, '/' : 3, '+' : 2, '-' : 2,
                 'AND' : 1, 'OR' : 1, 'XOR' : 1,
                 '(' : 0
                }
@@ -19,11 +19,11 @@ def infix_evaluator(infix_expression : str) -> int :
         # Numbers pushed into the stack
         if token.isdecimal() or (token[1:].isdecimal() and token[0] == '-'):
             operand_stack.append(int(token))
-        
+
         # Left bracket into the operators' stack
         elif token == '(':
             operator_stack.append(token)
-        
+
         # When a right bracket is encountered, all operators on top of the left bracket in the stack should be popped.
         elif token == ')':
             top = operator_stack.pop()
@@ -47,7 +47,7 @@ def infix_evaluator(infix_expression : str) -> int :
             # The current operator should be pushed into the stack
             operator_stack.append(token)
 
-    # After the expression traversal is completed, the remaining operators on the stack also require calcualtion.  
+    # After the expression traversal is completed, the remaining operators on the stack also require calcualtion.
     while operator_stack:
         top = operator_stack.pop()
         op2 = operand_stack.pop()
@@ -82,9 +82,12 @@ def do(envs_stack, expr):
         return expr
     elif isinstance(expr, str):  # Support direct infix string evaluation
         return infix_evaluator(expr)
-    elif isinstance(expr, list) and expr[0] in OPS:
-        operation = OPS[expr[0]]
-        return operation(envs_stack, expr[1:])
+    elif isinstance(expr, list):
+        if isinstance(expr[0], str) and expr[0] in OPS:
+            operation = OPS[expr[0]]
+            return operation(envs_stack, expr[1:])
+        elif isinstance(expr[0], list):
+            do(envs_stack, expr[0])
     else:
         raise ValueError("Unknown expression format")
 
@@ -104,7 +107,54 @@ def do_setzen(envs_stack, args):
 
 def do_bekommen(envs_stack, args):
     var_name = args[0]
-    return envs_stack[-1][var_name]
+    for env in reversed(envs_stack):
+        if var_name in env:
+            return env[var_name]
+    raise NameError(f"Name {var_name} not found in the scope")
+
+
+# Step02
+def do_addieren(envs_stack, args):
+    assert len(args) == 2
+    left = do(envs_stack, args[0])
+    right = do(envs_stack, args[1])
+    return left + right
+
+def do_betrag(envs_stack, args):
+    assert len(args) == 1
+    val = do(envs_stack, args[0])
+    return abs(val)
+
+def do_func(envs_stack, args):
+    func_name = args[0]
+    params = args[1]
+    body = args[2:]
+    # 将函数定义添加到当前环境的栈顶
+    envs_stack[-1][func_name] = (params, body, envs_stack[-1].copy())
+    return f"Defined function {func_name}"
+
+def do_call(envs_stack, args):
+    func_name = args[0]
+    args_values = [do(envs_stack, arg) for arg in args[1:]]
+    func_def = envs_stack[-1].get(func_name)
+    if func_def is None:
+        raise NameError(f"Function {func_name} not found")
+    params, body, func_env = func_def
+    if len(params) != len(args_values):
+        raise ValueError(f"Incorrect number of arguments for function {func_name}")
+    new_env = func_env.copy()
+    for param, value in zip(params, args_values):
+        new_env[param] = value
+    envs_stack.append(new_env)
+    result = do_sequenz(envs_stack, body)
+    envs_stack.pop()
+    return result[-1] if result else None
+
+def do_print(envs_stack, args):
+    for arg in args:
+        result = do(envs_stack, arg)
+        print(f'==lgl print now:{result}==')
+    return None
 
 # Supported operations
 OPS = {
@@ -117,14 +167,14 @@ OPS = {
 def main():
     assert len(sys.argv) == 2, "Usage: python lgl_interpreter.py example_infix.gsc"
     file_path = sys.argv[1]
-    
+
     # Load program from the given JSON file
     with open(file_path, "r") as source:
         program = json.load(source)
-    
+
     envs_stack = [{}]  # Initialize environment stack
     result = do(envs_stack, program)
-    
+
     print("Results for each expression in sequence:")
     for i, result in enumerate(result, start = 1):
         print(f"Expression {i}: {result}")
@@ -134,7 +184,7 @@ def main():
 
 def test_Feniel():
     # Load program from the given JSON file
-    with open('example_infix.gsc', "r") as source:
+    with open('example_call.gsc', "r") as source:
         program = json.load(source)
 
     envs_stack = [{}]  # Initialize environment stack
@@ -143,5 +193,6 @@ def test_Feniel():
     print("Results for each expression in sequence:")
     for i, result in enumerate(result, start=1):
         print(f"Expression {i}: {result}")
+
 
 test_Feniel()
